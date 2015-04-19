@@ -73,3 +73,6 @@ backup:
 	@for memory in $(memoryTypes); do \
 	sudo avrdude -p $(AVRTYPE) -c$(PROGTYPE) -b$(BAUD) -v -U $$memory:r:./$(AVRTYPE).$$memory.hex:i; \
 	done
+
+debsetup:
+	sudo apt-get install avrdude srecord binutils-avr gcc-avr avr-libc gdb-avr
