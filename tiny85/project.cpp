@@ -33,9 +33,29 @@ unsigned char BRIGHTG = 32;
 unsigned char BRIGHTB = 32;
 long effect_time;
 
+template <int BITS>
+void UpdateWithFade( int r, int g, int b ) {
+	const int FADEBITS = BITS;
+	const int fadetime = 1<<FADEBITS;
+	const int halffade = fadetime/2;
+	const int subfade = fadetime-1;
+	int fade = effect_time & subfade;
+	if( fade >= halffade ) fade = subfade - fade;
+	fade >>= FADEBITS - 8;
+
+	BRIGHTR = r * fade >> 8;
+	BRIGHTG = g * fade >> 8;
+	BRIGHTB = b * fade >> 8;
+}
+
+void UpdateDirect( int r, int g, int b ) {
+	BRIGHTR = r;
+	BRIGHTG = g;
+	BRIGHTB = b;
+}
 
 void UpdateRainbow() {
-	const int segtime = 128;
+	const int segtime = 64;
 	const int subseg = segtime-1;
 	const int segmult = 256/segtime;
 	int et = effect_time % (segtime*6);
@@ -66,25 +86,97 @@ void UpdateRainbow() {
 		g = 0;
 		b = 255;
 	}
-	const int FADEBITS = 11;
-	const int fadetime = 1<<FADEBITS;
-	const int halffade = fadetime/2;
-	const int subfade = fadetime-1;
-	int fade = effect_time & subfade;
-	if( fade >= halffade ) fade = subfade - fade;
-	fade >>= FADEBITS - 8;
+	UpdateWithFade<10>(r,g,b);
+}
 
-	BRIGHTR = r * fade >> 8;
-	BRIGHTG = g * fade >> 8;
-	BRIGHTB = b * fade >> 8;
+void UpdateFire() {
+	const int segcount = 2;
+	const int segtime = 16;
+	const int subseg = segtime-1;
+	const int segmult = 256/segtime;
+	int et = effect_time % (segtime*segcount);
+	int e = effect_time&subseg;
+	int r=0,g=0,b=0;
+	if( et < segtime*1 ) { // RED UP
+		r = 255;
+		g = (subseg-e) * segmult;
+	} else if( et < segtime*2 ) { // GREEN UP
+		r = 255;
+		g = e*segmult;
+	}
+	UpdateWithFade<8>(r,g,b);
+}
+
+void UpdateIce() {
+	const int rate = 16;
+	int et = effect_time / rate;
+	int RGB[] = {
+		0,200,255,
+		0,180,100,
+		0,0,100,
+		0,50,200,
+		0,100,240,
+		0,80,255,
+		0,130,240,
+		0,200,100,
+		150,0,200,
+		50,100,200,
+		0,0,100,
+		0,0,150,
+		80,80,200,
+		50,130,200,
+	};
+	const int numCols = sizeof( RGB ) / (sizeof(int)*3);
+	const int selected = et % numCols;
+	const int selected2 = (et+1) % numCols;
+	const int interp = 256 * ( effect_time % rate ) / rate;
+	int r = RGB[selected*3+0];
+	int g = RGB[selected*3+1];
+	int b = RGB[selected*3+2];
+	int r2 = RGB[selected2*3+0];
+	int g2 = RGB[selected2*3+1];
+	int b2 = RGB[selected2*3+2];
+	r = ( r * (256 - interp) + r2 * interp ) >> 8;
+	g = ( g * (256 - interp) + g2 * interp ) >> 8;
+	b = ( b * (256 - interp) + b2 * interp ) >> 8;
+	UpdateDirect(r,g,b);
+
+	BRIGHTR = r;
+	BRIGHTG = g;
+	BRIGHTB = b;
+}
+
+void UpdateNature() {
+	int et = effect_time / 32;
+	int r=0,g=0,b=0;
+	int RGB[] = {
+		100,200,50,
+		150,200,50,
+		100,250,80,
+		100,200,50,
+		200,250,120,
+		100,200,100,
+		170,170,70,
+		230,150,100,
+		120,250,120,
+	};
+	const int numCols = sizeof( RGB ) / (sizeof(int)*3);
+	const int selected = et % numCols;
+	r = RGB[selected*3+0];
+	g = RGB[selected*3+1];
+	b = RGB[selected*3+2];
+
+	BRIGHTR = r;
+	BRIGHTG = g;
+	BRIGHTB = b;
 }
 
 void UpdateBlink() {
 	effect_time %= 16;
 	if( effect_time < 10 ) {
-		BRIGHTR = 255;
-		BRIGHTG = 255;
-		BRIGHTB = 255;
+		BRIGHTR = 180;
+		BRIGHTG = 180;
+		BRIGHTB = 180;
 	} else {
 		BRIGHTR = 0;
 		BRIGHTG = 0;
@@ -140,7 +232,10 @@ int main(void) {
 		effect_time += 1;
 		switch( mode ) {
 			case 0: UpdateRainbow(); break;
-			case 1: UpdateBlink(); break;
+			case 1: UpdateFire(); break;
+			case 2: UpdateIce(); break;
+			case 3: UpdateNature(); break;
+			case 4: UpdateBlink(); break;
 			default: mode = 0; break;
 		}
 	}
