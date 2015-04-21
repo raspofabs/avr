@@ -91,7 +91,7 @@ void UpdateRainbow() {
 
 void UpdateFire() {
 	const int segcount = 2;
-	const int segtime = 16;
+	const int segtime = 4;
 	const int subseg = segtime-1;
 	const int segmult = 256/segtime;
 	int et = effect_time % (segtime*segcount);
@@ -171,6 +171,41 @@ void UpdateNature() {
 	BRIGHTB = b;
 }
 
+template <int rate, int fadeRate, bool interp, int N>
+void UpdateWithArray( int (&RGB)[N] ) {
+	int et = effect_time / rate;
+	const int numCols = N / 3;
+	const int selected = et % numCols;
+	int r = RGB[selected*3+0];
+	int g = RGB[selected*3+1];
+	int b = RGB[selected*3+2];
+	if( interp ) {
+		const int selected2 = (et+1) % numCols;
+		const int t = 256 * ( effect_time % rate ) / rate;
+		int r2 = RGB[selected2*3+0];
+		int g2 = RGB[selected2*3+1];
+		int b2 = RGB[selected2*3+2];
+		r = ( r * (256 - t) + r2 * t ) >> 8;
+		g = ( g * (256 - t) + g2 * t ) >> 8;
+		b = ( b * (256 - t) + b2 * t ) >> 8;
+	}
+
+	if( fadeRate ) {
+		UpdateWithFade<fadeRate>(r,g,b);
+	} else {
+		UpdateDirect(r,g,b);
+	}
+}
+
+void UpdateTest() {
+	int RGB[] = {
+		255,0,255,
+		0,255,255,
+		255,255,0,
+	};
+	UpdateWithArray<32,11,false>(RGB);
+}
+
 void UpdateBlink() {
 	effect_time %= 16;
 	if( effect_time < 10 ) {
@@ -235,7 +270,8 @@ int main(void) {
 			case 1: UpdateFire(); break;
 			case 2: UpdateIce(); break;
 			case 3: UpdateNature(); break;
-			case 4: UpdateBlink(); break;
+			case 4: UpdateTest(); break;
+			case 5: UpdateBlink(); break;
 			default: mode = 0; break;
 		}
 	}
