@@ -24,8 +24,8 @@ const int OUT_PINS = 1+2+4+8;
 const int IN_PIN = 16;
 
 void updateWDTLED() {
-	if( f_wdt ) PORTB |= 8;
-	else PORTB &= ~8;
+	//if( f_wdt ) PORTB |= 8;
+	//else PORTB &= ~8;
 }
 
 unsigned char BRIGHTR = 32;
@@ -33,15 +33,14 @@ unsigned char BRIGHTG = 32;
 unsigned char BRIGHTB = 32;
 long effect_time;
 
-template <int BITS>
-void UpdateWithFade( int r, int g, int b ) {
-	const int FADEBITS = BITS;
-	const int fadetime = 1<<FADEBITS;
-	const int halffade = fadetime/2;
-	const int subfade = fadetime-1;
+void UpdateWithFade( int r, int g, int b, int BITS ) {
+	int SHIFT = BITS - 8; // how many bits to reduce fade by to put it in 0-255
+	int fadetime = 1<<BITS;
+	int halffade = fadetime/2;
+	int subfade = fadetime-1;
 	int fade = effect_time & subfade;
 	if( fade >= halffade ) fade = subfade - fade;
-	fade >>= FADEBITS - 8;
+	fade >>= SHIFT; // bring it down (or up?)
 
 	BRIGHTR = r * fade >> 8;
 	BRIGHTG = g * fade >> 8;
@@ -49,123 +48,6 @@ void UpdateWithFade( int r, int g, int b ) {
 }
 
 void UpdateDirect( int r, int g, int b ) {
-	BRIGHTR = r;
-	BRIGHTG = g;
-	BRIGHTB = b;
-}
-
-void UpdateRainbow() {
-	const int segtime = 64;
-	const int subseg = segtime-1;
-	const int segmult = 256/segtime;
-	int et = effect_time % (segtime*6);
-	int e = effect_time&subseg;
-	int r,g,b;
-	if( et < segtime*1 ) { // RED UP
-		r = 255;
-		g = 0;
-		b = (subseg-e) * segmult;
-	} else if( et < segtime*2 ) { // GREEN UP
-		r = 255;
-		g = e*segmult;
-		b = 0;
-	} else if( et < segtime*3 ) { // RED DOWN
-		r = (subseg-e) * segmult;
-		g = 255;
-		b = 0;
-	} else if( et < segtime*4 ) { // BLUE UP
-		r = 0;
-		g = 255;
-		b = e*segmult;
-	} else if( et < segtime*5 ) { // GREEN DOWN
-		r = 0;
-		g = (subseg-e) * segmult;
-		b = 255;
-	} else { // RED UP
-		r = e*segmult;
-		g = 0;
-		b = 255;
-	}
-	UpdateWithFade<10>(r,g,b);
-}
-
-void UpdateFire() {
-	const int segcount = 2;
-	const int segtime = 4;
-	const int subseg = segtime-1;
-	const int segmult = 256/segtime;
-	int et = effect_time % (segtime*segcount);
-	int e = effect_time&subseg;
-	int r=0,g=0,b=0;
-	if( et < segtime*1 ) { // RED UP
-		r = 255;
-		g = (subseg-e) * segmult;
-	} else if( et < segtime*2 ) { // GREEN UP
-		r = 255;
-		g = e*segmult;
-	}
-	UpdateWithFade<8>(r,g,b);
-}
-
-void UpdateIce() {
-	const int rate = 16;
-	int et = effect_time / rate;
-	int RGB[] = {
-		0,200,255,
-		0,180,100,
-		0,0,100,
-		0,50,200,
-		0,100,240,
-		0,80,255,
-		0,130,240,
-		0,200,100,
-		150,0,200,
-		50,100,200,
-		0,0,100,
-		0,0,150,
-		80,80,200,
-		50,130,200,
-	};
-	const int numCols = sizeof( RGB ) / (sizeof(int)*3);
-	const int selected = et % numCols;
-	const int selected2 = (et+1) % numCols;
-	const int interp = 256 * ( effect_time % rate ) / rate;
-	int r = RGB[selected*3+0];
-	int g = RGB[selected*3+1];
-	int b = RGB[selected*3+2];
-	int r2 = RGB[selected2*3+0];
-	int g2 = RGB[selected2*3+1];
-	int b2 = RGB[selected2*3+2];
-	r = ( r * (256 - interp) + r2 * interp ) >> 8;
-	g = ( g * (256 - interp) + g2 * interp ) >> 8;
-	b = ( b * (256 - interp) + b2 * interp ) >> 8;
-	UpdateDirect(r,g,b);
-
-	BRIGHTR = r;
-	BRIGHTG = g;
-	BRIGHTB = b;
-}
-
-void UpdateNature() {
-	int et = effect_time / 32;
-	int r=0,g=0,b=0;
-	int RGB[] = {
-		100,200,50,
-		150,200,50,
-		100,250,80,
-		100,200,50,
-		200,250,120,
-		100,200,100,
-		170,170,70,
-		230,150,100,
-		120,250,120,
-	};
-	const int numCols = sizeof( RGB ) / (sizeof(int)*3);
-	const int selected = et % numCols;
-	r = RGB[selected*3+0];
-	g = RGB[selected*3+1];
-	b = RGB[selected*3+2];
-
 	BRIGHTR = r;
 	BRIGHTG = g;
 	BRIGHTB = b;
@@ -191,10 +73,87 @@ void UpdateWithArray( int (&RGB)[N] ) {
 	}
 
 	if( fadeRate ) {
-		UpdateWithFade<fadeRate>(r,g,b);
+		UpdateWithFade(r,g,b, fadeRate);
 	} else {
 		UpdateDirect(r,g,b);
 	}
+}
+
+
+void UpdateRainbow() {
+	int RGB[] = {
+		255,0,0,
+		255,255,0,
+		0,255,0,
+		0,255,255,
+		0,0,255,
+		255,0,255,
+	};
+	UpdateWithArray<64,10,true>(RGB);
+}
+void UpdateRainbow2() {
+	int RGB[] = {
+		255,0,0,
+		255,255,0,
+		0,255,0,
+		0,255,255,
+		0,0,255,
+		255,0,255,
+	};
+	UpdateWithArray<32,10,false>(RGB);
+}
+
+void UpdateFire() {
+	int RGB[] = {
+		150,30,0,
+		150,30,0,
+		180,130,0,
+		150,30,0,
+		255,255,0,
+		150,30,0,
+		255,205,0,
+		255,255,0,
+		255,205,0,
+		150,80,0,
+		150,30,0,
+		255,205,0,
+	};
+	UpdateWithArray<8,8,true>(RGB);
+}
+
+void UpdateIce() {
+	int RGB[] = {
+		0,200,255,
+		0,180,100,
+		0,0,100,
+		0,50,200,
+		0,100,240,
+		0,80,255,
+		0,130,240,
+		0,200,100,
+		150,0,200,
+		50,100,200,
+		0,0,100,
+		0,0,150,
+		80,80,200,
+		50,130,200,
+	};
+	UpdateWithArray<16,0,true>(RGB);
+}
+
+void UpdateNature() {
+	int RGB[] = {
+		100,200,50,
+		150,200,50,
+		100,250,80,
+		100,200,50,
+		200,250,120,
+		100,200,100,
+		170,170,70,
+		230,150,100,
+		120,250,120,
+	};
+	UpdateWithArray<32,0,false>(RGB);
 }
 
 void UpdateTest() {
@@ -204,6 +163,13 @@ void UpdateTest() {
 		255,255,0,
 	};
 	UpdateWithArray<32,11,false>(RGB);
+}
+void UpdateTest2() {
+	int RGB[] = {
+		255,255,255,
+		0,0,0,
+	};
+	UpdateWithArray<128,11,true>(RGB);
 }
 
 void UpdateBlink() {
@@ -224,11 +190,11 @@ bool buttonPressed() {
 	static int upFor;
 	static bool debounce;
 	if( PINB & IN_PIN ) {
-		downFor += 1;
-		upFor = 0;
-	} else {
 		upFor += 1;
 		downFor = 0;
+	} else {
+		downFor += 1;
+		upFor = 0;
 	}
 	if( downFor > 3 ) {
 		debounce = true;
@@ -244,7 +210,7 @@ int main(void) {
 	// set pin state
 	DDRB |= OUT_PINS;
 	DDRB &= ~IN_PIN;
-	PORTB = 0;
+	PORTB = IN_PIN;
 	for( int i = 0; i < 10; ++i ) {
 		PORTB ^= OUT_PINS;
 		_delay_ms(100);
@@ -267,11 +233,13 @@ int main(void) {
 		effect_time += 1;
 		switch( mode ) {
 			case 0: UpdateRainbow(); break;
-			case 1: UpdateFire(); break;
-			case 2: UpdateIce(); break;
-			case 3: UpdateNature(); break;
-			case 4: UpdateTest(); break;
-			case 5: UpdateBlink(); break;
+			case 1: UpdateRainbow2(); break;
+			case 2: UpdateFire(); break;
+			case 3: UpdateIce(); break;
+			case 4: UpdateNature(); break;
+			case 5: UpdateTest(); break;
+			case 6: UpdateTest2(); break;
+			//case 7: UpdateBlink(); break;
 			default: mode = 0; break;
 		}
 	}

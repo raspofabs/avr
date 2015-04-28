@@ -1,7 +1,7 @@
 BAUD=19200
 SRC=project
 AVRTYPE=attiny85
-AVRFREQ=4000000 # 1MHz for accurate baudrate timing
+AVRFREQ=1000000 # 1MHz for accurate baudrate timing
 PROGTYPE=usbasp
 
 cflags=-g -DF_CPU=$(AVRFREQ) -Wall -Os -Werror -Wextra

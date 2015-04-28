@@ -168,7 +168,6 @@ void system_sleep() {
 // 0=16ms, 1=32ms,2=64ms,3=128ms,4=250ms,5=500ms
 // 6=1 sec,7=2 sec, 8=4 sec, 9= 8sec
 void setup_watchdog(int ii) {
-
   unsigned char bb;
   //int ww;
   if (ii > 9 ) ii=9;
@@ -199,8 +198,6 @@ void setup_flashing() {
 	TCCR0B = 0x05; // clock source CLK/1024, start timer
 	TCCR0B = 0x02;
 	OCR0A = 0x20; // counting target
-	//TIFR |= 0x01; // clear the flag
-	TIMSK = 0x10; // TC0 compare match A interrupt variable
 	sei();
 }
 
