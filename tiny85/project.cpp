@@ -33,7 +33,7 @@ unsigned char BRIGHTG = 32;
 unsigned char BRIGHTB = 32;
 long effect_time;
 
-void UpdateWithFade( int r, int g, int b, int BITS ) {
+void UpdateWithFade( unsigned int r, unsigned int g, unsigned int b, int BITS ) {
 	int SHIFT = BITS - 8; // how many bits to reduce fade by to put it in 0-255
 	int fadetime = 1<<BITS;
 	int halffade = fadetime/2;
@@ -58,15 +58,15 @@ void UpdateWithArray( int (&RGB)[N] ) {
 	int et = effect_time / rate;
 	const int numCols = N / 3;
 	const int selected = et % numCols;
-	int r = RGB[selected*3+0];
-	int g = RGB[selected*3+1];
-	int b = RGB[selected*3+2];
+	unsigned int r = RGB[selected*3+0];
+	unsigned int g = RGB[selected*3+1];
+	unsigned int b = RGB[selected*3+2];
 	if( interp ) {
 		const int selected2 = (et+1) % numCols;
 		const int t = 256 * ( effect_time % rate ) / rate;
-		int r2 = RGB[selected2*3+0];
-		int g2 = RGB[selected2*3+1];
-		int b2 = RGB[selected2*3+2];
+		unsigned int r2 = RGB[selected2*3+0];
+		unsigned int g2 = RGB[selected2*3+1];
+		unsigned int b2 = RGB[selected2*3+2];
 		r = ( r * (256 - t) + r2 * t ) >> 8;
 		g = ( g * (256 - t) + g2 * t ) >> 8;
 		b = ( b * (256 - t) + b2 * t ) >> 8;
